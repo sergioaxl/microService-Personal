@@ -2,19 +2,20 @@ const personalRepository = require('../repository/personalRepository');
 const departamentoRepository = require('../repository/departamentoRepository');
 const AppError = require('../utils/Error');
 const {
-    parseId, textoRequerido, textoOpcional,
+    parseId, parseEnteroNoNegativo, textoRequerido, textoOpcional,
     parsePaginacion, armarPaginacion, parseBusqueda
 } = require('../utils/validators');
 
 const ESTADOS = ['activo', 'inactivo'];
 
 class PersonalService {
+    // id_huella ya NO se recibe ni se valida aquí: se reserva
+    // automáticamente en el repositorio al registrar (RF-10, con huella digital).
     async validarDatos(datos) {
         const limpio = {
             nombre: textoRequerido(datos.nombre, 'nombre', 50),
             apellido_paterno: textoRequerido(datos.apellido_paterno, 'apellido_paterno', 50),
             apellido_materno: textoOpcional(datos.apellido_materno, 'apellido_materno', 50),
-            codigo_barras: textoRequerido(datos.codigo_barras, 'codigo_barras', 100),
             departamento_id: parseId(datos.departamento_id, 'departamento_id'),
             fotografia_url: textoOpcional(datos.fotografia_url, 'fotografia_url', 255),
         };
@@ -28,12 +29,6 @@ class PersonalService {
 
     async registrarPersonal(datos) {
         const limpio = await this.validarDatos(datos);
-
-        const existeCodigo = await personalRepository.buscarPorCodigoBarras(limpio.codigo_barras);
-        if (existeCodigo) {
-            throw new AppError('El código de barras ya está asociado a otro empleado', 409);
-        }
-
         return personalRepository.crear(limpio);
     }
 
@@ -60,11 +55,11 @@ class PersonalService {
         return { personal: filas, pagination: armarPaginacion(paginacion, total) };
     }
 
-    async obtenerPorCodigoBarras(codigo) {
-        const limpio = textoRequerido(codigo, 'codigo_barras', 100);
-        const empleado = await personalRepository.buscarPorCodigoBarras(limpio);
+    async obtenerPorIdHuella(idHuella) {
+        const limpio = parseEnteroNoNegativo(idHuella, 'id_huella');
+        const empleado = await personalRepository.buscarPorIdHuella(limpio);
         if (!empleado) {
-            throw new AppError('No existe personal con ese código de barras', 404);
+            throw new AppError('No existe personal con esa huella registrada', 404);
         }
         return empleado;
     }
@@ -86,19 +81,30 @@ class PersonalService {
             throw new AppError('Empleado no encontrado', 404);
         }
 
-        const otro = await personalRepository.buscarPorCodigoBarras(limpio.codigo_barras);
-        if (otro && otro.id !== idNum) {
-            throw new AppError('El código de barras ya está asociado a otro empleado', 409);
-        }
-
         return personalRepository.actualizar(idNum, limpio);
     }
 
+    // Baja logica: NO se borra el registro, se marca como inactivo.
+    // Asi el historial de accesos (que referencia a esta persona) nunca queda huerfano.
     async eliminarPersonal(id) {
-        const eliminado = await personalRepository.eliminar(parseId(id));
-        if (!eliminado) {
+        const dado = await personalRepository.actualizarEstado(parseId(id), 'inactivo');
+        if (!dado) {
             throw new AppError('Empleado no encontrado', 404);
         }
+    }
+
+    // Confirma que la huella física ya se capturó en el sensor (la posición
+    // id_huella ya se había reservado desde que se registró a la persona).
+    async confirmarHuella(id) {
+        const idNum = parseId(id);
+        const empleado = await personalRepository.buscarPorId(idNum);
+        if (!empleado) {
+            throw new AppError('Empleado no encontrado', 404);
+        }
+        if (empleado.huella_registrada) {
+            throw new AppError('Esta persona ya tiene la huella registrada', 400);
+        }
+        return personalRepository.marcarHuellaRegistrada(idNum);
     }
 
     async cambiarEstadoPersonal(id, estado) {

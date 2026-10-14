@@ -1,13 +1,13 @@
 const pool = require('../config/database');
 
-const COLUMNAS_PUBLICAS = 'id, usuario, nombre_completo, correo, creado_en';
+const COLUMNAS_PUBLICAS = 'id, usuario, nombre, apellido_paterno, apellido_materno, correo, creado_en';
 
 class AdministradorRepository {
-    async crear({ usuario, password_hash, nombre_completo, correo }) {
+    async crear({ usuario, password_hash, nombre, apellido_paterno, apellido_materno, correo }) {
         const result = await pool.query(
-            `INSERT INTO administradores (usuario, password_hash, nombre_completo, correo)
-             VALUES ($1, $2, $3, $4) RETURNING ${COLUMNAS_PUBLICAS}`,
-            [usuario, password_hash, nombre_completo, correo]
+            `INSERT INTO administradores (usuario, password_hash, nombre, apellido_paterno, apellido_materno, correo)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${COLUMNAS_PUBLICAS}`,
+            [usuario, password_hash, nombre, apellido_paterno, apellido_materno, correo]
         );
         return result.rows[0];
     }
@@ -41,11 +41,11 @@ class AdministradorRepository {
         return result.rows[0];
     }
 
-    async actualizar(id, { nombre_completo, correo }) {
+    async actualizar(id, { nombre, apellido_paterno, apellido_materno, correo }) {
         const result = await pool.query(
-            `UPDATE administradores SET nombre_completo = $1, correo = $2
-             WHERE id = $3 RETURNING ${COLUMNAS_PUBLICAS}`,
-            [nombre_completo, correo, id]
+            `UPDATE administradores SET nombre = $1, apellido_paterno = $2, apellido_materno = $3, correo = $4
+             WHERE id = $5 RETURNING ${COLUMNAS_PUBLICAS}`,
+            [nombre, apellido_paterno, apellido_materno, correo, id]
         );
         return result.rows[0];
     }

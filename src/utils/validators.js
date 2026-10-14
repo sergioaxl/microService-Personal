@@ -10,6 +10,18 @@ const parseId = (valor, campo = 'id') => {
     return id;
 };
 
+// A diferencia de parseId (para llaves primarias de la BD, que aquí siempre
+// empiezan en 1), id_huella es la posición del sensor de huellas y los
+// lectores ópticos comunes (R307/AS608/FPM10A) numeran esas posiciones desde
+// el 0, así que 0 es un valor válido.
+const parseEnteroNoNegativo = (valor, campo = 'valor') => {
+    const n = Number(valor);
+    if (!Number.isInteger(n) || n < 0 || n > MAX_INT) {
+        throw new AppError(`El campo ${campo} debe ser un número entero mayor o igual a 0`, 400);
+    }
+    return n;
+};
+
 const textoRequerido = (valor, campo, max) => {
     if (typeof valor !== 'string' || valor.trim() === '') {
         throw new AppError(`El campo ${campo} es obligatorio`, 400);
@@ -68,4 +80,4 @@ const parseBusqueda = (valor, campo = 'q', max = 100) => {
     return limpio;
 };
 
-module.exports = { parseId, textoRequerido, textoOpcional, parsePaginacion, armarPaginacion, parseBusqueda };
+module.exports = { parseId, parseEnteroNoNegativo, textoRequerido, textoOpcional, parsePaginacion, armarPaginacion, parseBusqueda };

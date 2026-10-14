@@ -1,8 +1,10 @@
 const administradorService = require('../services/administradorService');
+const { auditar } = require('../utils/auditoria');
 const catchAsync = require('../utils/catchAsync');
 
 exports.registrarAdministrador = catchAsync(async (req, res, next) => {
     const administrador = await administradorService.registrar(req.body ?? {});
+    auditar(req, 'personal', { accion: 'ADMIN_CREADO', entidad: 'admin', entidad_id: administrador?.id, detalle: { usuario: administrador?.usuario } });
 
     res.status(201).json({
         status: 'success',
@@ -32,6 +34,7 @@ exports.obtenerAdministrador = catchAsync(async (req, res, next) => {
 
 exports.actualizarAdministrador = catchAsync(async (req, res, next) => {
     const administrador = await administradorService.actualizar(req.params.id, req.body ?? {});
+    auditar(req, 'personal', { accion: 'ADMIN_ACTUALIZADO', entidad: 'admin', entidad_id: req.params.id, detalle: { usuario: administrador?.usuario } });
 
     res.status(200).json({
         status: 'success',
@@ -41,6 +44,7 @@ exports.actualizarAdministrador = catchAsync(async (req, res, next) => {
 
 exports.cambiarPassword = catchAsync(async (req, res, next) => {
     const resultado = await administradorService.cambiarPassword(req.params.id, req.body ?? {});
+    auditar(req, 'personal', { accion: 'ADMIN_PASSWORD_CAMBIADA', entidad: 'admin', entidad_id: req.params.id });
 
     res.status(200).json({
         status: 'success',
@@ -50,6 +54,7 @@ exports.cambiarPassword = catchAsync(async (req, res, next) => {
 
 exports.eliminarAdministrador = catchAsync(async (req, res, next) => {
     await administradorService.eliminar(req.params.id);
+    auditar(req, 'personal', { accion: 'ADMIN_ELIMINADO', entidad: 'admin', entidad_id: req.params.id });
 
     res.status(204).send();
 });

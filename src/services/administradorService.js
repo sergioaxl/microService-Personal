@@ -1,6 +1,6 @@
 const administradorRepository = require('../repository/administradorRepository');
 const AppError = require('../utils/Error');
-const { parseId, textoRequerido, parsePaginacion, armarPaginacion } = require('../utils/validators');
+const { parseId, textoRequerido, textoOpcional, parsePaginacion, armarPaginacion } = require('../utils/validators');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
 const REGEX_USUARIO = /^[a-z0-9._-]{3,50}$/;
@@ -36,7 +36,9 @@ class AdministradorService {
     async registrar(datos) {
         const usuario = validarUsuario(datos.usuario);
         const password = validarPassword(datos.password, 'password');
-        const nombre_completo = textoRequerido(datos.nombre_completo, 'nombre_completo', 100);
+        const nombre = textoRequerido(datos.nombre, 'nombre', 50);
+        const apellido_paterno = textoRequerido(datos.apellido_paterno, 'apellido_paterno', 50);
+        const apellido_materno = textoOpcional(datos.apellido_materno, 'apellido_materno', 50);
         const correo = validarCorreo(datos.correo);
 
         if (await administradorRepository.buscarPorUsuario(usuario)) {
@@ -47,7 +49,7 @@ class AdministradorService {
         }
 
         const password_hash = await hashPassword(password);
-        return administradorRepository.crear({ usuario, password_hash, nombre_completo, correo });
+        return administradorRepository.crear({ usuario, password_hash, nombre, apellido_paterno, apellido_materno, correo });
     }
 
     // Devuelve { administradores, pagination }
@@ -67,7 +69,9 @@ class AdministradorService {
 
     async actualizar(id, datos) {
         const idNum = parseId(id);
-        const nombre_completo = textoRequerido(datos.nombre_completo, 'nombre_completo', 100);
+        const nombre = textoRequerido(datos.nombre, 'nombre', 50);
+        const apellido_paterno = textoRequerido(datos.apellido_paterno, 'apellido_paterno', 50);
+        const apellido_materno = textoOpcional(datos.apellido_materno, 'apellido_materno', 50);
         const correo = validarCorreo(datos.correo);
 
         const actual = await administradorRepository.buscarPorId(idNum);
@@ -79,7 +83,7 @@ class AdministradorService {
         if (otro && otro.id !== idNum) {
             throw new AppError('El correo ya está registrado', 409);
         }
-        return administradorRepository.actualizar(idNum, { nombre_completo, correo });
+        return administradorRepository.actualizar(idNum, { nombre, apellido_paterno, apellido_materno, correo });
     }
 
     async cambiarPassword(id, datos) {
